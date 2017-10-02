@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# 20140529 georg@glas.eu.org - Do NOT add your key here - ask your project manager for authorization and let him forward your change request to the administration team
+# make sure your to file a change request contains a openssh public key format which is minimal 2048 bits long and contains a creation timestamp and email address in the form YYYYMMDD email@address in the comments
+# the attachment filename has to be your emailaddress with .pub extension - eg: georg@glas.eu.org.pub 
+# make sure your key is protected with a passphrase, if there is ever a chance that your key is lost or compromised please let the administration team know and submit a new key 
+{% if item.disabled|default('false')|bool==False %}
+{% for key in item.posix_users_ssh_authorized_keys|default("\n") %}
+{{ key }}
+{% endfor %}
+{% else %}
+# user {{ item.name }} was disabled, all keys removed
+{% endif %}

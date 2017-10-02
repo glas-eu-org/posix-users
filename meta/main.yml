@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: Georg Glas
+  description: Manage Unix System User
+  company: Georg Glas EDV Dienstleistungen
+  license: Commercial
+  min_ansible_version: 2.1
+  platforms:
+  - name: Ubuntu
+    versions:
+  - name: Debian
+    versions:
+  categories:
+  - system
+dependencies:
+  - { role: common-organisations-variables }

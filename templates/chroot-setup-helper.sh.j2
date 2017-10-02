@@ -1,0 +1,85 @@
+#!/bin/sh
+
+if [ ! $# -eq 2 ]; then
+  echo "Syntax : $0 /path/to/chrootdirectory /path/to/executable"
+  echo "Example: $0 /home/user/chroot /usr/bin/php5-cgi"
+  exit 1
+fi
+
+BASE="${1}"
+[ ! -d $BASE ] && mkdir -p $BASE || : 
+
+if [ ${2} == /etc/passwd ]; then
+  echo "special file ${2} to $BASE..."
+  if [ -f ${BASE}/etc/.passwd.updated ]; then rm ${BASE}/etc/.passwd.updated; fi
+# find alle files and there owner
+  for user in $(find ${BASE} -type d -exec stat -c %U {} \;|sort|uniq ); do
+    cat /etc/passwd |grep -E "${user}:" >>${BASE}/etc/.passwd.updated
+  done
+  mv ${BASE}/etc/.passwd.updated ${BASE}/etc/passwd
+  exit 0
+fi
+
+if [ ${2} == /etc/group ]; then
+  echo "special file ${2} to $BASE..."
+  if [ -f ${BASE}/etc/.group.updated ]; then rm ${BASE}/etc/.group.updated; fi
+  # find alle files and there owner
+  for group in $(find ${BASE} -type d -exec stat -c %G {} \;|sort|uniq ); do
+    cat /etc/group |grep -E "${group}:" >>${BASE}/etc/.group.updated
+  done
+  mv ${BASE}/etc/.group.updated ${BASE}/etc/group
+  exit 0
+fi
+
+echo "Linking/Copying file to $BASE..."
+d="$(dirname ${2})"
+[ ! -d $BASE$d ] && mkdir -p $BASE$d || :
+if [ ! -L ${2} ]; then
+  echo "Linking/Copying file ${2} into $BASE/$d"
+  /bin/ln -d ${2} $BASE${2}||/bin/cp -a ${2} $BASE${2}
+else 
+  echo "Linking/Copying link $(readlink -f ${2}) which is a symlink to ${2} into $BASE/$d"
+  /bin/ln -d ${2} $BASE$d||/bin/cp -a ${2} $BASE$d
+  FILE=$(readlink -f ${2})
+  d="$(dirname ${FILE})"
+  [ ! -d $BASE$d ] && mkdir -p $BASE$d || :
+  /bin/ln -d ${FILE} $BASE$d||/bin/cp -a ${FILE} $BASE$d
+fi
+
+
+if [ -x "${2}" ] && [ -f "${2}" ]; then
+	# iggy ld-linux* file as it is not shared one
+	FILES="$(ldd ${2} | awk '{ print $3 }' |egrep -v ^'\(')"
+
+	echo "Linking/Copying shared files/libs to $BASE..."
+	for library in $FILES; do
+		library_directory="$(dirname $library)"
+		[ ! -d $BASE$library_directory ] && mkdir -p $BASE$library_directory || :
+		if [ ! -L ${library} ]; then
+			echo "Linking/Copying library for ${2}: file ${library} into $BASE/$library_directory"
+			/bin/ln -d ${library} ${BASE}${library_directory}||/bin/cp -a ${library} ${BASE}${library_directory}
+		else 
+			echo "Linking/Copying link $(readlink -f ${library}) which is a symlink to ${library} into $BASE/$library_directory"
+			/bin/ln -d ${library} ${BASE}${library_directory}||/bin/cp -a ${library} ${BASE}${library_directory}
+			library_file=$(readlink -f ${library})
+			library_directory="$(dirname ${library})"
+			[ ! -d $BASE$library_directory ] && mkdir -p $BASE$library_directory || :
+			/bin/ln -d ${library_file} ${BASE}${library_directory}||/bin/cp -a ${library_file} ${BASE}${library_directory}
+		fi
+	done
+
+# copy /lib/ld-linux* or /lib64/ld-linux* to $BASE/$sldlsubdir
+# get ld-linux full file location 
+	sldl="$(ldd ${2} | grep 'ld-linux' | awk '{ print $1}')"
+# now get sub-dir
+	sldlsubdir="$(dirname $sldl)"
+
+	if [ ! -f $BASE$sldl ]; then
+		echo "Linking/Copying $sldl $BASE$sldlsubdir..."
+		if [ -L $BASE$sldlsubdir ]; then
+			/bin/ln -d $sldl $BASE$sldlsubdir||/bin/cp -f $sldl $BASE$sldlsubdir
+		fi
+	else
+	:
+	fi
+fi
