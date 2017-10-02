@@ -1,6 +1,6 @@
 ---
-  - name: read organisation variables
-  import_tasks: "{{ role_path }}/../common-organisations-variables/tasks/main.yml"
+- name: read organisation variables
+  import_tasks: "{{ role_path }}/../org.eu.glas.common-organisations-variables/tasks/main.yml"
   tags:
   - posix-users
 
