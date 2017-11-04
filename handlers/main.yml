@@ -40,27 +40,34 @@
   become: false
   local_action: |
     shell \
-        if [ -S {{ ansible_ssh_ControlPath }} ]; then \
-        ssh -O exit -o ControlPath={{ ansible_ssh_ControlPath }} {{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) }}; \
-        count=0;\
-        while (true); do \
-            if [ ${count} -gt 5 ]; then \
-                echo "ERROR: Failed to wait for ssh multiplexer to stop: {{ ansible_ssh_ControlPath }} still exists"; \
-                exit 32; \
-            else \
-                if [ -S {{ ansible_ssh_ControlPath }} ]; then \
-                    count=$((count+1)); \
-                    sleep 1; \
-                else \
-                    break; \
-                fi; \
-            fi; \
+        for SSH_CONTROLPATH_OPTION in {{ ansible_ssh_ControlPath }}; do \
+           if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
+                ssh -O exit -o ControlPath=${SSH_CONTROLPATH_OPTION} {{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) }}; \
+                count=0;\
+                while (true); do \
+                    if [ ${count} -gt 5 ]; then \
+                        echo "ERROR: Failed to wait for ssh multiplexer to stop: ${SSH_CONTROLPATH_OPTION} still exists"; \
+                        exit 32; \
+                    else \
+                        if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
+                            count=$((count+1)); \
+                            sleep 1; \
+                        else \
+                            break; \
+                        fi; \
+                    fi; \
+                done; \                
+           else \
+                echo "INFO: no ansible ssh control path at ${SSH_CONTROLPATH_OPTION}"
+           fi;
         done; \
-     else \
-        echo "ERROR: ansible ssh control path '{{ ansible_ssh_ControlPath }}' does not exist: make sure ansible_ssh_ControlPath in posix-users/defaults/main.yml matches control_path settings in ansible.cfg"; \
-     fi;
+        for SSH_CONTROLPATH_OPTION in {{ ansible_ssh_ControlPath }}; do \
+            if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
+                echo "ERROR: ansible ssh control path option ${SSH_CONTROLPATH_OPTION} still exist: make sure ansible_ssh_ControlPath in posix-users/defaults/main.yml matches control_path settings in ansible.cfg"; \
+            fi;
+        done; \
   #  failed_when: false
   when: not common_ansible_ansible_ssh_user|skipped
   check_mode: false
   register: posix_user_restart_ssh_multiplexer
-  failed_when: "'ERROR' in posix_user_restart_ssh_multiplexer.stderr or posix_user_restart_ssh_multiplexer.stdout"
+  failed_when: "'ERROR' in posix_user_restart_ssh_multiplexer.stderr or 'ERROR' in posix_user_restart_ssh_multiplexer.stdout"

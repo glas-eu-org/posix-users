@@ -10,6 +10,6 @@ posix_users_only_handle_my_user: false
 posix_users_up2date: false
 # set this to your ControlPath (coded in ansible/constants.py
 # see https://github.com/ansible/ansible/issues/6396
-ansible_ssh_ControlPath: "~/{{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) + (hostvars[inventory_hostname]['ansible_ssh_port']|default('22')) + common_ansible_ansible_ssh_user.stdout }}"
+ansible_ssh_ControlPath: "~/{{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) + (hostvars[inventory_hostname]['ansible_ssh_port']|default('22')) + common_ansible_ansible_ssh_user.stdout }} ~/{{ lookup('dig', '{{inventory_hostname}}') + (hostvars[inventory_hostname]['ansible_ssh_port']|default('22')) + common_ansible_ansible_ssh_user.stdout }}"
 posix_user_chroot_setup_helper_path: /usr/local/sbin/chroot-setup-helper.sh
 posix_users_rssh_path: /usr/bin/rssh
