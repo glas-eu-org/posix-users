@@ -1,5 +1,5 @@
 - name: get list of available groups (/etc/groups)
-  shell: 'getent group|cut -d: -f1|grep -E "({{ item.posix_users_groups|join("|")}})" | tr "\n" ","'
+  shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | tr "\n" ","'
   become: False
   changed_when: False
   register: posix_users_available_groups

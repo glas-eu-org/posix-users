@@ -260,7 +260,7 @@
   - posix-users
 
 - name: get list of available groups (/etc/groups)
-  shell: 'getent group|cut -d: -f1|grep -E "({{ item.posix_users_groups|join("|")}})" | tr "\n" ","'
+  shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | tr "\n" ","'
   when: ('"' + item.name + '"' in posix_users_available_users.stdout_lines|default('') and item.posix_users_groups is defined ) and posix_users_up2date == false
   become: False
   register: posix_users_available_groups
