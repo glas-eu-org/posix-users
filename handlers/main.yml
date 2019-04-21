@@ -67,7 +67,7 @@
             fi;
         done; \
   #  failed_when: false
-  when: not common_ansible_ansible_ssh_user|skipped
+  when: not common_ansible_ansible_ssh_user is skipped
   check_mode: false
   register: posix_user_restart_ssh_multiplexer
   failed_when: "'ERROR' in posix_user_restart_ssh_multiplexer.stderr or 'ERROR' in posix_user_restart_ssh_multiplexer.stdout"
