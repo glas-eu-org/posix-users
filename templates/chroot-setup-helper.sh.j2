@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [ ! $# -eq 2 ]; then
   echo "Syntax : $0 /path/to/chrootdirectory /path/to/executable"
@@ -9,7 +9,7 @@ fi
 BASE="${1}"
 [ ! -d $BASE ] && mkdir -p $BASE || : 
 
-if [ "${2}" == "/etc/passwd" ]; then
+if [ ${2} == /etc/passwd ]; then
   echo "special file ${2} to $BASE..."
   if [ -f ${BASE}/etc/.passwd.updated ]; then rm ${BASE}/etc/.passwd.updated; fi
 # find alle files and there owner
@@ -20,7 +20,7 @@ if [ "${2}" == "/etc/passwd" ]; then
   exit 0
 fi
 
-if [ "${2}" == "/etc/group" ]; then
+if [ ${2} == /etc/group ]; then
   echo "special file ${2} to $BASE..."
   if [ -f ${BASE}/etc/.group.updated ]; then rm ${BASE}/etc/.group.updated; fi
   # find alle files and there owner

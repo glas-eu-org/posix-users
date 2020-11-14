@@ -1,0 +1,48 @@
+---  
+- name: get list of available groups (/etc/groups)
+  shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | sed -n -e "H;\${x;s/\n/,/g;s/^,//;p;}"'
+  when: ('"' + item.name + '"' in posix_users_available_users.stdout_lines|default('') and item.posix_users_groups is defined ) and posix_users_up2date == false
+  become: False
+  register: posix_users_available_groups
+  changed_when: False
+  check_mode: no
+  with_items: '{{common_users_accounts}}'
+  tags:
+  - posix-users
+
+- name: add users to available groups (/etc/groups)
+  user: > 
+   name={{ item.item.name }} 
+   groups={{ item.stdout }}
+  with_items: '{{posix_users_available_groups.results}}'
+  when: ('"' + item.item.name + '"' in posix_users_available_users.stdout_lines|default('') and item.stdout is defined and posix_users_available_groups.results is defined and not posix_users_skip_group_update|default(false)|bool) and (item.item.posix_users_password_hash is defined or item.item.posix_users_ssh_authorized_keys|default('')|length > 0)  and posix_users_up2date == false
+  notify:
+   - register ansible_ssh_user used for this machine
+   - restart ssh multiplexer
+  become: true
+  tags:
+  - posix-users
+
+- name: check if groups were added after updating /etc/passwd
+  shell: "find /etc/group -newer /etc/passwd|grep /etc/group"
+  register: posix_users_passwd_newer_then_group
+  when: posix_users_disabled_user is defined and posix_users_enabled_user is defined and posix_users_up2date == false
+  changed_when: 'posix_users_passwd_newer_then_group.rc == 0 or posix_users_disabled_user.changed or posix_users_enabled_user.changed'
+  failed_when: "'ERROR' in posix_users_passwd_newer_then_group.stderr"
+  notify:
+   - get list of available groups (/etc/groups)
+   - add users to available groups (/etc/groups)
+   - update /etc/passwd timestamp
+  tags:
+   - posix-users
+
+- name: make sure we update users only once per playbook run
+  set_fact: 
+    posix_users_up2date: true
+  tags:
+   - posix-users
+
+#- name: Display all variables/facts known for a host
+#  debug: var=hostvars[inventory_hostname] verbosity=4
+#  tags:
+#   - posix-users

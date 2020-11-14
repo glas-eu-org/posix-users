@@ -1,11 +1,11 @@
 - name: get list of available groups (/etc/groups)
-  shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | tr "\n" ","'
+  shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | sed -n -e "H;\${x;s/\n/,/g;s/^,//;p;}"'
   become: False
   changed_when: False
   register: posix_users_available_groups
   check_mode: false
   with_items: "{{ common_users_accounts }}"
-  when: common_users_accounts is defined and item.posix_users_groups is defined and ( not posix_users_only_handle_my_user or item.name == ansible_user_id)
+  when: common_users_accounts is defined and item.posix_users_groups is defined and ( posix_users_only_handle_my_user and item.name == ansible_user_id)
 
 - name: add users to available groups (/etc/groups)
   user: name={{ item.item.name }} groups={{ item.stdout }}
@@ -23,51 +23,21 @@
 
 - name: register ansible_ssh_user used for this machine
   shell: echo ${USER}
+  changed_when: False
   become: false
   register: common_ansible_ansible_ssh_user
   check_mode: false
-  when: ansible_connection == 'smart' or ansible_connection == 'ssh'
-
-- name: debug ansible_ssh_ControlPath
-  debug: var=ansible_ssh_ControlPath verbosity=4
-
-- name: debug ansible_connection
-  debug: var=ansible_connection
 
 ## fixme: we should check if controlpath is setup correct in ../../../../ansible.cfg (we should expect ansible_ssh_ControlPath or in any other directory thats listed in http://docs.ansible.com/ansible/latest/intro_configuration.html
 ## fixme: this handler should be a library
 - name: restart ssh multiplexer
   become: false
-  local_action: |
-    shell \
-        for SSH_CONTROLPATH_OPTION in {{ ansible_ssh_ControlPath }}; do \
-           if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
-                ssh -O exit -o ControlPath=${SSH_CONTROLPATH_OPTION} {{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) }}; \
-                count=0;\
-                while (true); do \
-                    if [ ${count} -gt 5 ]; then \
-                        echo "ERROR: Failed to wait for ssh multiplexer to stop: ${SSH_CONTROLPATH_OPTION} still exists"; \
-                        exit 32; \
-                    else \
-                        if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
-                            count=$((count+1)); \
-                            sleep 1; \
-                        else \
-                            break; \
-                        fi; \
-                    fi; \
-                done; \                
-           else \
-                echo "INFO: no ansible ssh control path at ${SSH_CONTROLPATH_OPTION}"
-           fi;
-        done; \
-        for SSH_CONTROLPATH_OPTION in {{ ansible_ssh_ControlPath }}; do \
-            if [ -S ${SSH_CONTROLPATH_OPTION} ]; then \
-                echo "ERROR: ansible ssh control path option ${SSH_CONTROLPATH_OPTION} still exist: make sure ansible_ssh_ControlPath in posix-users/defaults/main.yml matches control_path settings in ansible.cfg"; \
-            fi;
-        done; \
-  #  failed_when: false
-  when: not common_ansible_ansible_ssh_user is skipped
-  check_mode: false
-  register: posix_user_restart_ssh_multiplexer
-  failed_when: "'ERROR' in posix_user_restart_ssh_multiplexer.stderr or 'ERROR' in posix_user_restart_ssh_multiplexer.stdout"
+  shell: 
+   cmd: "./ssh-control-connection-stop.sh {{ ansible_ssh_ControlPath }} {{ hostvars[inventory_hostname]['ansible_ssh_host']|default(inventory_hostname) }}"
+   chdir: "{{ role_path }}/files"
+  delegate_to: 127.0.0.1
+  changed_when: False
+
+- name: make sure we are updating users with new groups
+  set_fact:
+    posix_users_up2date: false
