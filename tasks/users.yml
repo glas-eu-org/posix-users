@@ -16,6 +16,18 @@
   tags:
   - posix-users
 
+- name: modify ansible control user (/etc/passwd,/etc/shadow)
+  user: >
+   name={{ item.name }}
+   comment="{{ item.posix_users_gecos|default(item.firstname|default(omit) + ' ' + item.lastname|default(omit)) }}"
+   shell={{ item.posix_users_shell|default('/bin/bash') }}
+  with_items: '{{common_users_accounts}}'
+  register: posix_users_enabled_user
+  when: (item.disabled|default('false')|bool==False and (item.posix_users_password_hash is defined or item.posix_users_ssh_authorized_keys|default('')|length > 0) and not posix_users_group_update_only|default(false)|bool and not posix_users_skip_create_or_modify|default(false)|bool) and posix_users_up2date == false and (( item.lastname is defined and item.firstname is defined) or item.posix_users_gecos is defined)
+  become: true
+  tags:
+  - posix-users
+
 - name: change password exiration (/etc/shadow)
   chage: 
    user={{ item.name }}
