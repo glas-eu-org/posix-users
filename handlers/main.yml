@@ -1,3 +1,10 @@
+- name: register ansible_ssh_user used for this machine
+  shell: echo ${USER}
+  changed_when: False
+  become: false
+  register: common_ansible_ansible_ssh_user
+  check_mode: false
+
 - name: get list of available groups (/etc/groups)
   shell: 'getent group|cut -d: -f1|grep -E "(^{{ item.posix_users_groups|join("$|^")}}$)" | sed -n -e "H;\${x;s/\n/,/g;s/^,//;p;}"'
   become: False
@@ -20,13 +27,6 @@
   with_items:
    - /etc/passwd
   become: true
-
-- name: register ansible_ssh_user used for this machine
-  shell: echo ${USER}
-  changed_when: False
-  become: false
-  register: common_ansible_ansible_ssh_user
-  check_mode: false
 
 ## fixme: we should check if controlpath is setup correct in ../../../../ansible.cfg (we should expect ansible_ssh_ControlPath or in any other directory thats listed in http://docs.ansible.com/ansible/latest/intro_configuration.html
 ## fixme: this handler should be a library
