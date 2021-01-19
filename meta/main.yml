@@ -1,7 +1,6 @@
 ---
 galaxy_info:
-  name: posix-user
-  author: org.eu.glas
+  name: org.eu.glas.posix-user
   description: Manage Unix System User
   company: Georg Glas EDV Dienstleistungen
   license: Commercial
@@ -13,4 +12,5 @@ galaxy_info:
     versions:
   categories:
   - system
-
+dependencies:
+  - { role: org.eu.glas.common-organisations-variables }
