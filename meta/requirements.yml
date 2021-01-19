@@ -1,0 +1,3 @@
+- name: org.eu.glas.posix-user
+  scm: git
+  src: git@gitlab.com:glas.eu.org/ansible.role.posix-users.git

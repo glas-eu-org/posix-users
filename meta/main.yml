@@ -13,5 +13,4 @@ galaxy_info:
     versions:
   categories:
   - system
-dependencies:
-  - { role: org.eu.glas.common-organisations-variables }
+
